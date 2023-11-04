@@ -1,5 +1,8 @@
-use logpeek::im_a_lib_fn;
+use log::{LevelFilter, warn};
+use logpeek::init;
 
 fn main() {
-    im_a_lib_fn();
+    init(LevelFilter::Warn).unwrap();
+
+    warn!("TESTING!");
 }
