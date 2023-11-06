@@ -1,12 +1,34 @@
 use log::LevelFilter;
 
-pub struct Config {
-    pub out_file: &'static str,
-    pub log_level: LevelFilter,
+pub enum OutputFileName {
+    AutoGenerate,
+    Custom(&'static str),
 }
 
-impl Config {
-    pub fn new(out_file_name: &'static str, log_level: LevelFilter) -> Config {
-        Config { out_file: out_file_name, log_level }
+pub enum OutputDirName {
+    CurrentDir,
+    CustomDir(&'static str),
+}
+
+pub enum TimeZone { //TODO finalize this implementation (probably more timezones)
+    Local,
+    UTC,
+}
+
+pub struct Config {
+    pub out_file_name: OutputFileName,
+    pub out_dir_name: OutputDirName,
+    pub min_log_level: LevelFilter,
+    pub timezone: TimeZone,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            out_file_name: OutputFileName::AutoGenerate,
+            out_dir_name: OutputDirName::CurrentDir,
+            min_log_level: LevelFilter::Info,
+            timezone: TimeZone::Local,
+        }
     }
 }
