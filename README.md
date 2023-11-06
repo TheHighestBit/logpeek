@@ -8,6 +8,7 @@ Easy to use logging library for Rust with a built-in web based dashboard.
 - [ ] Use the API provided by the log crate. This makes logpeek a drop-in replacement for already existing projects.
   - [ ] Implement the Log trait for the logpeek struct.
   - [ ] Ensure compatibility with all of the supported macros.
+  - [ ] Look into how error handling should be done exactly (who is responsible for what).
 - [ ] Implement the build method, that sets up the logger.
 - [ ] Design a Config object with all of the required options.
 - [ ] Implement the write to file functionality.
