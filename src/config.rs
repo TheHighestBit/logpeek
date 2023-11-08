@@ -1,5 +1,6 @@
 use log::LevelFilter;
 
+#[derive(PartialEq)]
 pub enum LoggingMode {
     File,
     Console,

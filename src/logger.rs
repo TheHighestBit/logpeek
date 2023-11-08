@@ -10,6 +10,7 @@ use crate::{Config, config};
 use crate::config::OutputDirName;
 
 pub struct Logger {
+    //TODO when we are logging to console, we dont need this file, just a mutex
     file_handle: Mutex<File>,
     config: Config,
 }
@@ -37,7 +38,13 @@ impl Logger {
     pub fn write(&self, message: &str) {
         let mut file_mutex = self.file_handle.lock().unwrap();
 
-        file_mutex.write_all(message.as_bytes()).expect("Failed to write to file!");
+        if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::Console {
+            print!("{}", message);
+        }
+
+        if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::File {
+            file_mutex.write_all(message.as_bytes()).expect("Failed to write to file!");
+        }
     }
 
     pub fn flush(&self) {
