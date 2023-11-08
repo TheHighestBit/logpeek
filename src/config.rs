@@ -1,5 +1,11 @@
 use log::LevelFilter;
 
+pub enum LoggingMode {
+    File,
+    Console,
+    FileAndConsole,
+}
+
 pub enum OutputFileName {
     AutoGenerate,
     Custom(&'static str),
@@ -10,9 +16,17 @@ pub enum OutputDirName {
     CustomDir(&'static str),
 }
 
-pub enum TimeZone { //TODO finalize this implementation (probably more timezones)
+//Can only use UTC and Local unless we add another dependency
+pub enum TimeZone {
     Local,
     UTC,
+}
+
+//TODO Add a custom format options as well
+pub enum DateTimeFormat {
+    ISO8601,
+    RFC3339,
+    RFC2822,
 }
 
 pub struct Config {
@@ -20,6 +34,8 @@ pub struct Config {
     pub out_dir_name: OutputDirName,
     pub min_log_level: LevelFilter,
     pub timezone: TimeZone,
+    pub logging_mode: LoggingMode,
+    pub datetime_format: DateTimeFormat,
 }
 
 impl Default for Config {
@@ -29,6 +45,8 @@ impl Default for Config {
             out_dir_name: OutputDirName::CurrentDir,
             min_log_level: LevelFilter::Info,
             timezone: TimeZone::Local,
+            logging_mode: LoggingMode::Console,
+            datetime_format: DateTimeFormat::ISO8601,
         }
     }
 }

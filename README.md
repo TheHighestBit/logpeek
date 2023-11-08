@@ -18,7 +18,3 @@ Easy to use logging library for Rust with a built-in web based dashboard.
 - [ ] Explore additional functionality, such as supporting Serde.
 - [ ] Support stylized text in terminal (colors and such).
 - [ ] Finalize documentation for creates.io
-
-
-# Web dashboard implementation
-TBD
