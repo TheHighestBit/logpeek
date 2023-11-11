@@ -1,5 +1,4 @@
-use std::io::Write;
-use log::{Log, SetLoggerError};
+use log::SetLoggerError;
 
 use config::Config;
 use logger::Logger;

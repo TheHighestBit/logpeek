@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 time = { version = "0.3.30", features = ["formatting", "local-offset"] }
 log = { version = "0.4.20", features = ["std"] }
+colored = "2.0.4"

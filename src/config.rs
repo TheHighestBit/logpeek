@@ -1,5 +1,8 @@
 use log::LevelFilter;
 
+//Add possibility for console logger to log to stdout, stderr or both
+
+
 #[derive(PartialEq)]
 pub enum LoggingMode {
     File,
@@ -30,6 +33,12 @@ pub enum DateTimeFormat {
     RFC2822,
 }
 
+#[derive(PartialEq)]
+pub enum UseTermColor {
+    True,
+    False,
+}
+
 pub struct Config {
     pub out_file_name: OutputFileName,
     pub out_dir_name: OutputDirName,
@@ -37,6 +46,7 @@ pub struct Config {
     pub timezone: TimeZone,
     pub logging_mode: LoggingMode,
     pub datetime_format: DateTimeFormat,
+    pub use_term_color: UseTermColor,
 }
 
 impl Default for Config {
@@ -48,6 +58,7 @@ impl Default for Config {
             timezone: TimeZone::Local,
             logging_mode: LoggingMode::Console,
             datetime_format: DateTimeFormat::ISO8601,
+            use_term_color: UseTermColor::True,
         }
     }
 }

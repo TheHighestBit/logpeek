@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use colored::Colorize;
 use log::{Log, Metadata, Record};
 use time::{format_description, OffsetDateTime};
 use time::format_description::well_known::{Iso8601, Rfc2822, Rfc3339};
@@ -10,47 +11,52 @@ use crate::{Config, config};
 use crate::config::OutputDirName;
 
 pub struct Logger {
-    //TODO when we are logging to console, we dont need this file, just a mutex
-    file_handle: Mutex<File>,
+    output_lock: Mutex<Option<File>>,
     config: Config,
 }
 
 impl Logger {
     pub fn new(config: Config) -> Logger {
-        let out_path = Logger::get_log_pathbuf(&config);
+        let file_handle = match config.logging_mode {
+            config::LoggingMode::File | config::LoggingMode::FileAndConsole => {
+                let log_path = Logger::get_log_pathbuf(&config);
 
-        fs::create_dir_all(out_path.parent().unwrap()).expect("Failed to create parent directories");
+                fs::create_dir_all(log_path.parent().unwrap()).expect("Failed to create log directory!");
 
-        println!("Logging to: {}", out_path.display());
+                let file = File::options()
+                .append(true)
+                .create(true)
+                .open(&log_path)
+                .expect("Failed to open file!");
 
-        let file_handle = File::options()
-            .append(true)
-            .create(true)
-            .open(&out_path)
-            .expect("Failed to open file!");
+                Some(file)
+
+            },
+            _ => None,
+        };
 
         Logger {
-            file_handle: Mutex::new(file_handle),
+            output_lock: Mutex::new(file_handle),
             config
         }
     }
 
     pub fn write(&self, message: &str) {
-        let mut file_mutex = self.file_handle.lock().unwrap();
+        let mut output_mutex = self.output_lock.lock().unwrap();
 
         if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::Console {
             print!("{}", message);
         }
 
-        if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::File {
-            file_mutex.write_all(message.as_bytes()).expect("Failed to write to file!");
+        if let Some(file) = output_mutex.as_mut() {
+            file.write_all(message.as_bytes()).expect("Failed to write to file!");
         }
     }
 
     pub fn flush(&self) {
-        let mut file_mutex = self.file_handle.lock().unwrap();
-
-        file_mutex.flush().expect("Failed to write to disk!");
+        if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::File {
+            self.flush();
+        };
     }
 
     pub fn get_current_time(&self) -> String {
@@ -82,7 +88,6 @@ impl Logger {
 
     //Generates the logfile name automatically, always UTC (for now)
     fn generate_log_name() -> String {
-        //This functions is called once per execution so this is fine performance wise
         let format = format_description::parse(
             "[year]_[month]_[day]_[hour]_[minute]_[second].log",
         ).expect("Invalid time format description");
@@ -98,9 +103,21 @@ impl Log for Logger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            let message = format!("{} - {} - {}\n", self.get_current_time(), record.level(), record.args());
+            let message = format!("{} {} {} - {}\n", self.get_current_time(), record.level(), record.target(), record.args());
 
-            self.write(&message);
+            if self.config.use_term_color == config::UseTermColor::True {
+                let color = match record.level() {
+                    log::Level::Error => "red",
+                    log::Level::Warn => "yellow",
+                    log::Level::Info => "green",
+                    log::Level::Debug => "blue",
+                    log::Level::Trace => "magenta",
+                };
+
+                self.write(&message.color(color).to_string());
+            } else {
+                self.write(&message);
+            };
         }
     }
 
