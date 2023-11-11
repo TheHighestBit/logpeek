@@ -1,8 +1,6 @@
 use log::LevelFilter;
 
 //Add possibility for console logger to log to stdout, stderr or both
-
-
 #[derive(PartialEq)]
 pub enum LoggingMode {
     File,
@@ -26,11 +24,11 @@ pub enum TimeZone {
     UTC,
 }
 
-//TODO Add a custom format options as well
 pub enum DateTimeFormat {
     ISO8601,
     RFC3339,
     RFC2822,
+    Custom(&'static str),
 }
 
 #[derive(PartialEq)]

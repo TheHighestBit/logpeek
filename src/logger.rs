@@ -55,7 +55,11 @@ impl Logger {
 
     pub fn flush(&self) {
         if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::File {
-            self.flush();
+            let mut output_mutex = self.output_lock.lock().unwrap();
+
+            if let Some(file) = output_mutex.as_mut() {
+                file.flush().expect("Failed to write to file!");
+            }
         };
     }
 
@@ -69,6 +73,13 @@ impl Logger {
             config::DateTimeFormat::ISO8601 => dt.format(&Iso8601::DEFAULT).expect("Failed to format date"),
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339).expect("Failed to format date"),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822).expect("Failed to format date"),
+            config::DateTimeFormat::Custom(format_str) => {
+                match format_description::parse_borrowed::<1>(&format_str) {
+                    Ok(format_description) => dt.format(&format_description)
+                        .unwrap_or_else(|_| "Failed to format date with custom format".to_string()),
+                    Err(_) => "Invalid custom format string".to_string(),
+                }
+            }
         }
     }
 
