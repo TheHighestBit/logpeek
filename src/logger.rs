@@ -11,6 +11,7 @@ use crate::{Config, config};
 use crate::config::OutputDirName;
 
 pub struct Logger {
+    //Not using BufWriter because there is no guaranteed way to flush it in case of a panic
     output_lock: Mutex<Option<File>>,
     config: Config,
 }
@@ -41,14 +42,27 @@ impl Logger {
         }
     }
 
-    pub fn write(&self, message: &str) {
-        let mut output_mutex = self.output_lock.lock().unwrap();
-
+    pub fn write(&self, message: &str, color: Option<&str>) {
+        //No lock for console logging as print! macros are inherently thread safe.
+        //This gives better performance but the messages might appear out of order.
         if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::Console {
-            print!("{}", message);
+            let colored_message = if let Some(c) = color {
+                message.color(c)
+            } else {
+                message.normal()
+            };
+
+            match self.config.console_mode {
+                config::ConsoleMode::Stdout => print!("{}", colored_message),
+                config::ConsoleMode::Stderr => eprint!("{}", colored_message),
+                config::ConsoleMode::StdoutAndStderr => {
+                    print!("{}", colored_message);
+                    eprint!("{}", colored_message);
+                }
+            }
         }
 
-        if let Some(file) = output_mutex.as_mut() {
+        if let Some(file) = self.output_lock.lock().unwrap().as_mut() {
             file.write_all(message.as_bytes()).expect("Failed to write to file!");
         }
     }
@@ -97,7 +111,7 @@ impl Logger {
         out_path
     }
 
-    //Generates the logfile name automatically, always UTC (for now)
+    //Generates the logfile name automatically, always UTC
     fn generate_log_name() -> String {
         let format = format_description::parse(
             "[year]_[month]_[day]_[hour]_[minute]_[second].log",
@@ -125,9 +139,9 @@ impl Log for Logger {
                     log::Level::Trace => "magenta",
                 };
 
-                self.write(&message.color(color).to_string());
+                self.write(&message, Some(color));
             } else {
-                self.write(&message);
+                self.write(&message, None);
             };
         }
     }

@@ -1,11 +1,17 @@
 use log::LevelFilter;
 
-//Add possibility for console logger to log to stdout, stderr or both
 #[derive(PartialEq)]
 pub enum LoggingMode {
     File,
     Console,
     FileAndConsole,
+}
+
+#[derive(PartialEq)]
+pub enum ConsoleMode {
+    Stdout,
+    Stderr,
+    StdoutAndStderr,
 }
 
 pub enum OutputFileName {
@@ -43,6 +49,7 @@ pub struct Config {
     pub min_log_level: LevelFilter,
     pub timezone: TimeZone,
     pub logging_mode: LoggingMode,
+    pub console_mode: ConsoleMode,
     pub datetime_format: DateTimeFormat,
     pub use_term_color: UseTermColor,
 }
@@ -55,6 +62,7 @@ impl Default for Config {
             min_log_level: LevelFilter::Info,
             timezone: TimeZone::Local,
             logging_mode: LoggingMode::Console,
+            console_mode: ConsoleMode::Stdout,
             datetime_format: DateTimeFormat::ISO8601,
             use_term_color: UseTermColor::True,
         }
