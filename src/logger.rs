@@ -1,6 +1,6 @@
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{stderr, stdout, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use colored::Colorize;
@@ -11,7 +11,6 @@ use crate::{Config, config};
 use crate::config::OutputDirName;
 
 pub struct Logger {
-    //Not using BufWriter because there is no guaranteed way to flush it in case of a panic
     output_lock: Mutex<Option<File>>,
     config: Config,
 }
@@ -31,7 +30,6 @@ impl Logger {
                 .expect("Failed to open file!");
 
                 Some(file)
-
             },
             _ => None,
         };
@@ -43,8 +41,6 @@ impl Logger {
     }
 
     pub fn write(&self, message: &str, color: Option<&str>) {
-        //No lock for console logging as print! macros are inherently thread safe.
-        //This gives better performance but the messages might appear out of order.
         if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::Console {
             let colored_message = if let Some(c) = color {
                 message.color(c)
@@ -53,11 +49,11 @@ impl Logger {
             };
 
             match self.config.console_mode {
-                config::ConsoleMode::Stdout => print!("{}", colored_message),
-                config::ConsoleMode::Stderr => eprint!("{}", colored_message),
+                config::ConsoleMode::Stdout => write!(stdout(), "{}", colored_message).expect("Failed to write to stdout!"),
+                config::ConsoleMode::Stderr => write!(stderr(), "{}", colored_message).expect("Failed to write to stderr!"),
                 config::ConsoleMode::StdoutAndStderr => {
-                    print!("{}", colored_message);
-                    eprint!("{}", colored_message);
+                    write!(stdout(), "{}", colored_message).expect("Failed to write to stdout!");
+                    write!(stderr(), "{}", colored_message).expect("Failed to write to stderr!");
                 }
             }
         }
@@ -65,16 +61,6 @@ impl Logger {
         if let Some(file) = self.output_lock.lock().unwrap().as_mut() {
             file.write_all(message.as_bytes()).expect("Failed to write to file!");
         }
-    }
-
-    pub fn flush(&self) {
-        if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::File {
-            let mut output_mutex = self.output_lock.lock().unwrap();
-
-            if let Some(file) = output_mutex.as_mut() {
-                file.flush().expect("Failed to write to file!");
-            }
-        };
     }
 
     pub fn get_current_time(&self) -> String {
@@ -88,7 +74,7 @@ impl Logger {
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339).expect("Failed to format date"),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822).expect("Failed to format date"),
             config::DateTimeFormat::Custom(format_str) => {
-                match format_description::parse_borrowed::<1>(&format_str) {
+                match format_description::parse_borrowed::<1>(format_str) {
                     Ok(format_description) => dt.format(&format_description)
                         .unwrap_or_else(|_| "Failed to format date with custom format".to_string()),
                     Err(_) => "Invalid custom format string".to_string(),
@@ -111,7 +97,6 @@ impl Logger {
         out_path
     }
 
-    //Generates the logfile name automatically, always UTC
     fn generate_log_name() -> String {
         let format = format_description::parse(
             "[year]_[month]_[day]_[hour]_[minute]_[second].log",
@@ -147,6 +132,13 @@ impl Log for Logger {
     }
 
     fn flush(&self) {
-        self.flush();
+        match self.config.console_mode {
+            config::ConsoleMode::Stdout => stdout().flush().expect("Failed to flush stdout"),
+            config::ConsoleMode::Stderr => stderr().flush().expect("Failed to flush stderr"),
+            config::ConsoleMode::StdoutAndStderr => {
+                stdout().flush().expect("Failed to flush stdout");
+                stderr().flush().expect("Failed to flush stderr");
+            }
+        }
     }
 }

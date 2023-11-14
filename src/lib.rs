@@ -12,3 +12,7 @@ pub fn init(config: Config) -> Result<(), SetLoggerError> {
     log::set_boxed_logger(Box::new(Logger::new(config)))?;
     Ok(())
 }
+
+pub fn init_default() -> Result<(), SetLoggerError> {
+    init(Config::default())
+}
