@@ -24,7 +24,6 @@ pub enum OutputDirName {
     CustomDir(&'static str),
 }
 
-//Can only use UTC and Local unless we add another dependency
 pub enum TimeZone {
     Local,
     UTC,

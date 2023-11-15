@@ -4,6 +4,8 @@ use logpeek::init;
 
 //TODO finalize error handling, the logger should never cause a panic under any circumstances
 //TODO verify correct behaviour under multithreaded context
+//TODO verify correct target names
+//TODO add cfg check for ansi support
 //TODO add tests
 //TODO add documentation
 
