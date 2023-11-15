@@ -73,13 +73,7 @@ impl Logger {
             config::DateTimeFormat::ISO8601 => dt.format(&Iso8601::DEFAULT).expect("Failed to format date"),
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339).expect("Failed to format date"),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822).expect("Failed to format date"),
-            config::DateTimeFormat::Custom(format_str) => {
-                match format_description::parse_borrowed::<1>(format_str) {
-                    Ok(format_description) => dt.format(&format_description)
-                        .unwrap_or_else(|_| "Failed to format date with custom format".to_string()),
-                    Err(_) => "Invalid custom format string".to_string(),
-                }
-            }
+            config::DateTimeFormat::Custom(format_str) => dt.format(&format_description::parse_borrowed::<1>(format_str).expect("Invalid time format description")).expect("Failed to format date"),
         }
     }
 
