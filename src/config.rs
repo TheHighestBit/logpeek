@@ -11,7 +11,7 @@ pub enum LoggingMode {
 pub enum ConsoleMode {
     Stdout,
     Stderr,
-    StdoutAndStderr,
+    Mixed,
 }
 
 pub enum OutputFileName {
