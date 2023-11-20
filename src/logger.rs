@@ -139,7 +139,6 @@ impl Logger {
 
     fn log_critical<T>(message: T)
     where T: Display {
-        //TODO if terminal supports ansi then use color and not otherwise
         let message = format!("{} {} - {}\n", "CRITICAL", "logpeek", message).bright_red().bold();
 
         let _ = write!(stderr(), "{}", message);
@@ -174,4 +173,90 @@ impl Log for Logger {
             }
         };
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::BufRead;
+    use std::sync::Arc;
+    use log::*;
+    use crate::config::{LoggingMode, OutputFileName};
+    use super::*;
+
+    fn setup(config: Config) -> Logger {
+        Logger::new(config)
+    }
+
+    #[test]
+    fn test_all_levels() {
+        let log_file_name = "test_all_levels.log";
+
+        let logger = setup(Config {
+            min_log_level: LevelFilter::Trace,
+            out_file_name: OutputFileName::Custom(log_file_name),
+            logging_mode: LoggingMode::File,
+            ..Default::default()
+        });
+
+        logger.write("TRACE test\n", &Level::Trace);
+        logger.write("DEBUG test\n", &Level::Debug);
+        logger.write("INFO test\n", &Level::Info);
+        logger.write("WARN test\n", &Level::Warn);
+        logger.write("ERROR test\n", &Level::Error);
+
+        let file_handle = File::open(log_file_name).unwrap();
+        let reader = std::io::BufReader::new(file_handle);
+
+        let lines= reader.lines()
+            .map(|line| line.unwrap())
+            .collect::<Vec<_>>();
+
+        assert!(lines.get(0).unwrap().contains("TRACE"));
+        assert!(lines.get(1).unwrap().contains("DEBUG"));
+        assert!(lines.get(2).unwrap().contains("INFO"));
+        assert!(lines.get(3).unwrap().contains("WARN"));
+        assert!(lines.get(4).unwrap().contains("ERROR"));
+
+        fs::remove_file(log_file_name).unwrap();
+    }
+
+    #[test]
+    fn test_logging_multithreaded() {
+        let log_file_name = "test_multithreaded.log";
+
+        let logger = Arc::new(setup(Config {
+            min_log_level: LevelFilter::Trace,
+            out_file_name: OutputFileName::Custom(log_file_name),
+            logging_mode: LoggingMode::File,
+            ..Default::default()
+        }));
+        let mut threads = vec![];
+
+        for i in 0..5 {
+            let logger = Arc::clone(&logger);
+            threads.push(std::thread::spawn(move || {
+                for _ in 0..100 {
+                    let message = format!("TESTING from thread {}!\n", i);
+                    logger.write(&message, &Level::Error)
+                }
+            }));
+        }
+
+        for thread in threads {
+            thread.join().unwrap();
+        }
+
+        let file_handle = File::open(log_file_name).unwrap();
+        let reader = std::io::BufReader::new(file_handle);
+
+        let lines= reader.lines()
+            .map(|line| line.unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(lines.len(), 500);
+
+        fs::remove_file(log_file_name).unwrap();
+    }
+
+    //TODO add test to display that logs are written even in case of a panic
 }
