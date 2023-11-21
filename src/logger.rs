@@ -179,9 +179,22 @@ impl Log for Logger {
 mod tests {
     use std::io::BufRead;
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::{io, panic, thread};
     use log::*;
     use crate::config::{LoggingMode, OutputFileName};
+    use crate::init;
     use super::*;
+
+    struct FileCleaner {
+        file_name: &'static str,
+    }
+
+    impl Drop for FileCleaner {
+        fn drop(&mut self) {
+            fs::remove_file(self.file_name).unwrap();
+        }
+    }
 
     fn setup(config: Config) -> Logger {
         Logger::new(config)
@@ -190,6 +203,7 @@ mod tests {
     #[test]
     fn test_all_levels() {
         let log_file_name = "test_all_levels.log";
+        let _file_cleaner = FileCleaner { file_name: log_file_name };
 
         let logger = setup(Config {
             min_log_level: LevelFilter::Trace,
@@ -216,13 +230,44 @@ mod tests {
         assert!(lines.get(2).unwrap().contains("INFO"));
         assert!(lines.get(3).unwrap().contains("WARN"));
         assert!(lines.get(4).unwrap().contains("ERROR"));
+    }
 
-        fs::remove_file(log_file_name).unwrap();
+    #[test]
+    fn test_all_macros() {
+        let log_file_name = "test_all_macros.log";
+        let _file_cleaner = FileCleaner { file_name: log_file_name };
+
+        init(Config {
+            min_log_level: LevelFilter::Trace,
+            out_file_name: OutputFileName::Custom(log_file_name),
+            logging_mode: LoggingMode::File,
+            ..Default::default()
+        }).unwrap();
+
+        trace!("trace test");
+        debug!("debug test");
+        info!("info test");
+        warn!("warn test");
+        error!("error test");
+
+        let file_handle = File::open(log_file_name).unwrap();
+        let reader = std::io::BufReader::new(file_handle);
+
+        let lines= reader.lines()
+            .map(|line| line.unwrap())
+            .collect::<Vec<_>>();
+
+        assert!(lines.get(0).unwrap().contains("TRACE"));
+        assert!(lines.get(1).unwrap().contains("DEBUG"));
+        assert!(lines.get(2).unwrap().contains("INFO"));
+        assert!(lines.get(3).unwrap().contains("WARN"));
+        assert!(lines.get(4).unwrap().contains("ERROR"));
     }
 
     #[test]
     fn test_logging_multithreaded() {
         let log_file_name = "test_multithreaded.log";
+        let _file_cleaner = FileCleaner { file_name: log_file_name };
 
         let logger = Arc::new(setup(Config {
             min_log_level: LevelFilter::Trace,
@@ -254,9 +299,45 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(lines.len(), 500);
-
-        fs::remove_file(log_file_name).unwrap();
     }
 
-    //TODO add test to display that logs are written even in case of a panic
+    #[test]
+    fn test_panic_logging() {
+        let log_file_name = "test_panic.log";
+        let _file_cleaner = FileCleaner { file_name: log_file_name };
+
+        let logger = Arc::new(setup(Config {
+            min_log_level: LevelFilter::Trace,
+            out_file_name: OutputFileName::Custom(log_file_name),
+            logging_mode: LoggingMode::File,
+            ..Default::default()
+        }));
+
+        let panic_handled = Arc::new(AtomicBool::new(false));
+        let panic_handled_clone = Arc::clone(&panic_handled);
+
+        let _thread = thread::spawn(move || {
+            let result = panic::catch_unwind(|| {
+                logger.write("LAST LOG BEFORE PANIC!\n", &Level::Error);
+                panic!("Testing panic!");
+            });
+
+            panic_handled_clone.store(true, Ordering::SeqCst);
+
+            result
+        });
+
+        while !panic_handled.load(Ordering::SeqCst) {
+            thread::yield_now();
+        }
+
+        let file_handle = File::open(log_file_name).expect("Failed to open log file");
+        let reader = io::BufReader::new(file_handle);
+
+        let lines = reader.lines()
+            .map(|line| line.expect("Failed to read line"))
+            .collect::<Vec<_>>();
+
+        assert!(lines.get(0).unwrap().contains("LAST LOG BEFORE PANIC!"));
+    }
 }
