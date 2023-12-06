@@ -1,3 +1,4 @@
+//! Logger implementation
 use std::fmt::Display;
 use std::fs;
 use std::fs::File;
@@ -19,6 +20,14 @@ pub struct Logger {
 }
 
 impl Logger {
+    /// Creates a new `Logger` object.
+    ///
+    /// # Arguments
+    /// * `config`: A `Config` instance that specifies the settings for the logger.
+    ///
+    /// # Panics
+    /// This function will panic if it fails to create the log directory or the log file.
+    /// This can happen if the user does not have the required permissions.
     pub fn new(config: Config) -> Logger {
         let file_handle = match config.logging_mode {
             config::LoggingMode::File | config::LoggingMode::FileAndConsole => {
@@ -49,6 +58,7 @@ impl Logger {
         }
     }
 
+    /// Writes a message to the log file and/or the console.
     pub fn write(&self, message: &str, log_level: &log::Level) {
         if self.config.logging_mode == config::LoggingMode::FileAndConsole || self.config.logging_mode == config::LoggingMode::Console {
             let colored_message = if self.config.use_term_color == config::UseTermColor::True {
@@ -89,6 +99,7 @@ impl Logger {
         }
     }
 
+    /// Returns the current time as a string in the format specified in the config.
     pub fn get_current_time(&self) -> Result<String, ()> {
         let dt: OffsetDateTime = match self.config.timezone {
             config::TimeZone::Local => OffsetDateTime::now_local().map_err(|_| {
@@ -111,6 +122,7 @@ impl Logger {
         })
     }
 
+    /// Constructs the path for the log file.
     fn get_log_pathbuf(config: &Config) -> PathBuf {
         let mut out_path = match &config.out_dir_name {
             OutputDirName::CurrentDir => PathBuf::from("."),
@@ -125,6 +137,7 @@ impl Logger {
         out_path
     }
 
+    /// Generates a log file name based on the current date and time (UTC).
     fn generate_log_name() -> Result<String, ()> {
         let format = format_description::parse(
             "[year]_[month]_[day]_[hour]_[minute]_[second].log",
@@ -137,6 +150,7 @@ impl Logger {
         })
     }
 
+    /// Logs a custom 'CRITICAL' message to stderr. Used for internal errors that are recoverable but should still be dealt with.
     fn log_critical<T>(message: T)
     where T: Display {
         let message = format!("{} {} - {}\n", "CRITICAL", "logpeek", message).bright_red().bold();
@@ -186,6 +200,7 @@ mod tests {
     use crate::init;
     use super::*;
 
+    // Cleans up the log file after the test is done.
     struct FileCleaner {
         file_name: &'static str,
     }
@@ -200,6 +215,7 @@ mod tests {
         Logger::new(config)
     }
 
+    // Logs all log levels into a file and verifies that they were written correctly.
     #[test]
     fn test_all_levels() {
         let log_file_name = "test_all_levels.log";
@@ -232,6 +248,7 @@ mod tests {
         assert!(lines.get(4).unwrap().contains("ERROR"));
     }
 
+    // Logs all log levels into a file via the macros from the `log` crate and verifies that they were written correctly.
     #[test]
     fn test_all_macros() {
         let log_file_name = "test_all_macros.log";
@@ -264,6 +281,7 @@ mod tests {
         assert!(lines.get(4).unwrap().contains("ERROR"));
     }
 
+    // Tests logging from multiple threads simultaneously into a single file.
     #[test]
     fn test_logging_multithreaded() {
         let log_file_name = "test_multithreaded.log";
@@ -301,6 +319,7 @@ mod tests {
         assert_eq!(lines.len(), 500);
     }
 
+    // Verifies that the logging operation is atomic and entries are written even in case of a panic.
     #[test]
     fn test_panic_logging() {
         let log_file_name = "test_panic.log";
@@ -339,5 +358,39 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert!(lines.get(0).unwrap().contains("LAST LOG BEFORE PANIC!"));
+    }
+
+    // Tests for child thread logging when the main thread panics.
+    #[test]
+    fn test_panic_logging_main_thread() {
+        let log_file_name = "test_panic_main_thread.log";
+        let _file_cleaner = FileCleaner { file_name: log_file_name };
+
+        let logger = Arc::new(setup(Config {
+            min_log_level: LevelFilter::Trace,
+            out_file_name: OutputFileName::Custom(log_file_name),
+            logging_mode: LoggingMode::File,
+            ..Default::default()
+        }));
+
+        let _thread = thread::spawn(move || {
+            for _ in 0..1000 {
+                let message = format!("TESTING from thread {}!\n", 0);
+                logger.write(&message, &Level::Error)
+            }
+        });
+
+        let _ = panic::catch_unwind(|| {
+            panic!("Testing panic!");
+        });
+
+        let file_handle = File::open(log_file_name).expect("Failed to open log file");
+        let reader = io::BufReader::new(file_handle);
+
+        let lines = reader.lines()
+            .map(|line| line.expect("Failed to read line"))
+            .collect::<Vec<_>>();
+
+        assert_eq!(lines.len(), 1000);
     }
 }
