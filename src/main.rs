@@ -3,20 +3,17 @@ use logpeek::config::{Config, OutputDirName, LoggingMode, DateTimeFormat, Consol
 use logpeek::init;
 use crate::helpers::timeit_multithreaded;
 
-//TODO add tests
-//TODO add documentation
-
 fn main() {
     let config = Config {
         out_dir_name: OutputDirName::CustomDir("logs"),
         console_mode: ConsoleMode::Mixed,
-        logging_mode: LoggingMode::FileAndConsole,
+        logging_mode: LoggingMode::File,
         datetime_format: DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]"),
         ..Default::default() 
     };
 
     init(config).unwrap();
-    timeit_multithreaded(5, 100);
+    timeit_multithreaded(5, 10000);
 }
 
 mod helpers {
@@ -46,6 +43,8 @@ mod helpers {
         for thread in threads {
             thread.join().unwrap();
         }
+
+        logger().flush();
 
         println!("Time elapsed: {:?}", start_time.elapsed());
     }

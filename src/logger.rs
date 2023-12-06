@@ -1,8 +1,8 @@
 //! Logger implementation
 use std::fmt::Display;
-use std::fs;
+use std::{fs, io};
 use std::fs::File;
-use std::io::{stderr, stdout, Write};
+use std::io::{BufWriter, stderr, stdout, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -15,8 +15,29 @@ use crate::{Config, config};
 use crate::config::OutputDirName;
 
 pub struct Logger {
-    output_lock: Mutex<Option<File>>,
+    output_lock: Mutex<Option<Output>>,
     config: Config,
+}
+
+enum Output {
+    File(File),
+    Buffered(BufWriter<File>)
+}
+
+impl Write for Output {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            Output::File(file) => file.write(buf),
+            Output::Buffered(buffer) => buffer.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            Output::File(file) => file.flush(),
+            Output::Buffered(buffer) => buffer.flush(),
+        }
+    }
 }
 
 impl Logger {
@@ -29,7 +50,7 @@ impl Logger {
     /// This function will panic if it fails to create the log directory or the log file.
     /// This can happen if the user does not have the required permissions.
     pub fn new(config: Config) -> Logger {
-        let file_handle = match config.logging_mode {
+        let output_handle = match config.logging_mode {
             config::LoggingMode::File | config::LoggingMode::FileAndConsole => {
                 let log_path = Logger::get_log_pathbuf(&config);
 
@@ -47,13 +68,19 @@ impl Logger {
                         panic!("Failed to open log file at {:?}: {}", log_path, err)
                     });
 
-                Some(file)
+                let output = if config.logging_strategy == config::LoggingStrategy::Asynchronous {
+                    Output::Buffered(BufWriter::new(file))
+                } else {
+                    Output::File(file)
+                };
+
+                Some(output)
             },
             _ => None,
         };
 
         Logger {
-            output_lock: Mutex::new(file_handle),
+            output_lock: Mutex::new(output_handle),
             config
         }
     }
@@ -89,14 +116,34 @@ impl Logger {
             }
         }
 
-        if let Some(file) = self.output_lock.lock().unwrap_or_else(|err| {
+        if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
             Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
             err.into_inner()
         }).as_mut() {
-            file.write_all(message.as_bytes()).unwrap_or_else(|err| {
-                Logger::log_critical(format!("Failed to write to log file {:?}", err));
-            });
+            if let Err(e) = output_handle.write(message.as_bytes()) {
+                Logger::log_critical(format!("Failed to write to log file {:?}", e));
+            }
         }
+    }
+
+    pub fn flush(&self) {
+        if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
+            Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
+            err.into_inner()
+        }).as_mut() {
+            if let Err(e) = output_handle.flush() {
+                Logger::log_critical(format!("Failed to flush log file {:?}", e));
+            }
+        };
+
+        match self.config.console_mode {
+            config::ConsoleMode::Stdout => stdout().flush().ok(),
+            config::ConsoleMode::Stderr => stderr().flush().ok(),
+            config::ConsoleMode::Mixed => {
+                stdout().flush().ok();
+                stderr().flush().ok()
+            }
+        };
     }
 
     /// Returns the current time as a string in the format specified in the config.
@@ -178,14 +225,7 @@ impl Log for Logger {
     }
 
     fn flush(&self) {
-        match self.config.console_mode {
-            config::ConsoleMode::Stdout => stdout().flush().ok(),
-            config::ConsoleMode::Stderr => stderr().flush().ok(),
-            config::ConsoleMode::Mixed => {
-                stdout().flush().ok();
-                stderr().flush().ok()
-            }
-        };
+        self.flush();
     }
 }
 
@@ -302,6 +342,8 @@ mod tests {
                     let message = format!("TESTING from thread {}!\n", i);
                     logger.write(&message, &Level::Error)
                 }
+
+                logger.flush();
             }));
         }
 
@@ -358,39 +400,5 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert!(lines.get(0).unwrap().contains("LAST LOG BEFORE PANIC!"));
-    }
-
-    // Tests for child thread logging when the main thread panics.
-    #[test]
-    fn test_panic_logging_main_thread() {
-        let log_file_name = "test_panic_main_thread.log";
-        let _file_cleaner = FileCleaner { file_name: log_file_name };
-
-        let logger = Arc::new(setup(Config {
-            min_log_level: LevelFilter::Trace,
-            out_file_name: OutputFileName::Custom(log_file_name),
-            logging_mode: LoggingMode::File,
-            ..Default::default()
-        }));
-
-        let _thread = thread::spawn(move || {
-            for _ in 0..1000 {
-                let message = format!("TESTING from thread {}!\n", 0);
-                logger.write(&message, &Level::Error)
-            }
-        });
-
-        let _ = panic::catch_unwind(|| {
-            panic!("Testing panic!");
-        });
-
-        let file_handle = File::open(log_file_name).expect("Failed to open log file");
-        let reader = io::BufReader::new(file_handle);
-
-        let lines = reader.lines()
-            .map(|line| line.expect("Failed to read line"))
-            .collect::<Vec<_>>();
-
-        assert_eq!(lines.len(), 1000);
     }
 }

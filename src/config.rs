@@ -2,9 +2,9 @@
 use log::LevelFilter;
 
 
-#[derive(PartialEq)]
 /// Where the logs are written to
 /// Defaults to `Console`
+#[derive(PartialEq)]
 pub enum LoggingMode {
     /// Logs are written to a file
     File,
@@ -14,9 +14,10 @@ pub enum LoggingMode {
     FileAndConsole,
 }
 
-#[derive(PartialEq)]
+
 /// The output stream for the console. Only applies if `LoggingMode` is `Console` or `FileAndConsole`.
 /// Defaults to `Stdout`
+#[derive(PartialEq)]
 pub enum ConsoleMode {
     /// Logs are written to stdout
     Stdout,
@@ -62,12 +63,21 @@ pub enum DateTimeFormat {
     Custom(&'static str),
 }
 
-#[derive(PartialEq)]
 /// Whether to use ANSI escape codes to color the log entries in the terminal.
 /// Defaults to `True`
+#[derive(PartialEq)]
 pub enum UseTermColor {
     True,
     False,
+}
+
+/// Whether to write log entries synchronously (io-blocking) or asynchronously.
+/// When using asynchronous logging, make sure to call log::logger().flush() before exiting the program.
+/// Defaults to `Synchronous`
+#[derive(PartialEq)]
+pub enum LoggingStrategy {
+    Synchronous,
+    Asynchronous
 }
 
 /// 'Config' struct that contains the configuration options for the logger.
@@ -81,6 +91,7 @@ pub struct Config {
     pub console_mode: ConsoleMode,
     pub datetime_format: DateTimeFormat,
     pub use_term_color: UseTermColor,
+    pub logging_strategy: LoggingStrategy,
 }
 
 impl Default for Config {
@@ -94,6 +105,7 @@ impl Default for Config {
             console_mode: ConsoleMode::Stdout,
             datetime_format: DateTimeFormat::ISO8601,
             use_term_color: UseTermColor::True,
+            logging_strategy: LoggingStrategy::Synchronous,
         }
     }
 }
