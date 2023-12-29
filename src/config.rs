@@ -80,6 +80,15 @@ pub enum LoggingStrategy {
     Asynchronous
 }
 
+/// Whether to split the log files by size or not.
+/// If `True`, the log files will be split when they reach the specified size (in bytes).
+/// Defaults to `False`
+#[derive(PartialEq)]
+pub enum SplitLogFiles {
+    True(u64),
+    False
+}
+
 /// 'Config' struct that contains the configuration options for the logger.
 /// Use `Default::default()` for the default settings.
 pub struct Config {
@@ -92,6 +101,7 @@ pub struct Config {
     pub datetime_format: DateTimeFormat,
     pub use_term_color: UseTermColor,
     pub logging_strategy: LoggingStrategy,
+    pub split_log_files: SplitLogFiles,
 }
 
 impl Default for Config {
@@ -106,6 +116,7 @@ impl Default for Config {
             datetime_format: DateTimeFormat::ISO8601,
             use_term_color: UseTermColor::True,
             logging_strategy: LoggingStrategy::Synchronous,
+            split_log_files: SplitLogFiles::False
         }
     }
 }

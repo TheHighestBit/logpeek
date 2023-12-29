@@ -19,23 +19,28 @@ pub struct Logger {
     config: Config,
 }
 
-enum Output {
+enum OutputContainer {
     File(File),
     Buffered(BufWriter<File>)
 }
 
-impl Write for Output {
+struct Output {
+    container: OutputContainer,
+    file_size: u64,
+}
+
+impl Write for OutputContainer {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
-            Output::File(file) => file.write(buf),
-            Output::Buffered(buffer) => buffer.write(buf),
+            OutputContainer::File(file) => file.write(buf),
+            OutputContainer::Buffered(buffer) => buffer.write(buf),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
         match self {
-            Output::File(file) => file.flush(),
-            Output::Buffered(buffer) => buffer.flush(),
+            OutputContainer::File(file) => file.flush(),
+            OutputContainer::Buffered(buffer) => buffer.flush(),
         }
     }
 }
@@ -52,29 +57,7 @@ impl Logger {
     pub fn new(config: Config) -> Logger {
         let output_handle = match config.logging_mode {
             config::LoggingMode::File | config::LoggingMode::FileAndConsole => {
-                let log_path = Logger::get_log_pathbuf(&config);
-
-                fs::create_dir_all(log_path.parent().unwrap_or_else(|| {
-                    panic!("Failed to get parent directory for log path: {:?}", log_path)
-                })).unwrap_or_else(|err| {
-                    panic!("Failed to create log directory at {:?}: {}", log_path, err)
-                });
-
-                let file = File::options()
-                    .append(true)
-                    .create(true)
-                    .open(&log_path)
-                    .unwrap_or_else(|err| {
-                        panic!("Failed to open log file at {:?}: {}", log_path, err)
-                    });
-
-                let output = if config.logging_strategy == config::LoggingStrategy::Asynchronous {
-                    Output::Buffered(BufWriter::new(file))
-                } else {
-                    Output::File(file)
-                };
-
-                Some(output)
+                Some(Logger::output_file_setup(&config))
             },
             _ => None,
         };
@@ -82,6 +65,35 @@ impl Logger {
         Logger {
             output_lock: Mutex::new(output_handle),
             config
+        }
+    }
+
+    fn output_file_setup(config: &Config) -> Output {
+        let log_path = Logger::get_log_pathbuf(config);
+
+        fs::create_dir_all(log_path.parent().unwrap_or_else(|| {
+            panic!("Failed to get parent directory for log path: {:?}", log_path)
+        })).unwrap_or_else(|err| {
+            panic!("Failed to create log directory at {:?}: {}", log_path, err)
+        });
+
+        let file = File::options()
+            .append(true)
+            .create(true)
+            .open(&log_path)
+            .unwrap_or_else(|err| {
+                panic!("Failed to open log file at {:?}: {}", log_path, err)
+            });
+
+        let output_container = if config.logging_strategy == config::LoggingStrategy::Asynchronous {
+            OutputContainer::Buffered(BufWriter::new(file))
+        } else {
+            OutputContainer::File(file)
+        };
+
+        Output {
+            container: output_container,
+            file_size: 0,
         }
     }
 
@@ -116,13 +128,29 @@ impl Logger {
             }
         }
 
+        let mut is_split = false;
+
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
             Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
             err.into_inner()
         }).as_mut() {
-            if let Err(e) = output_handle.write(message.as_bytes()) {
+            if let Err(e) = output_handle.container.write(message.as_bytes()) {
                 Logger::log_critical(format!("Failed to write to log file {:?}", e));
             }
+
+            if self.config.split_log_files != config::SplitLogFiles::False {
+                output_handle.file_size += message.len() as u64;
+
+                if let config::SplitLogFiles::True(max_size) = self.config.split_log_files {
+                    if output_handle.file_size >= max_size {
+                        is_split = true;
+                    }
+                }
+            }
+        }
+
+        if is_split {
+            self.split_output_file();
         }
     }
 
@@ -131,7 +159,7 @@ impl Logger {
             Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
             err.into_inner()
         }).as_mut() {
-            if let Err(e) = output_handle.flush() {
+            if let Err(e) = output_handle.container.flush() {
                 Logger::log_critical(format!("Failed to flush log file {:?}", e));
             }
         };
@@ -144,6 +172,17 @@ impl Logger {
                 stderr().flush().ok()
             }
         };
+    }
+
+    fn split_output_file(&self) {
+        Logger::log_critical("Maximum log file size reached, creating a new log file...");
+        
+        if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
+            Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
+            err.into_inner()
+        }).as_mut() {
+            *output_handle = Logger::output_file_setup(&self.config);
+        }
     }
 
     /// Returns the current time as a string in the format specified in the config.

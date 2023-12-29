@@ -1,5 +1,8 @@
+use std::thread::sleep;
+use std::time::Duration;
+use helpers::timeit;
 use log::*;
-use logpeek::config::{Config, OutputDirName, LoggingMode, DateTimeFormat, ConsoleMode};
+use logpeek::config::{Config, OutputDirName, LoggingMode, ConsoleMode, SplitLogFiles};
 use logpeek::init;
 use crate::helpers::timeit_multithreaded;
 
@@ -8,12 +11,15 @@ fn main() {
         out_dir_name: OutputDirName::CustomDir("logs"),
         console_mode: ConsoleMode::Mixed,
         logging_mode: LoggingMode::File,
-        datetime_format: DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]"),
+        split_log_files: SplitLogFiles::True(5_000_0),
         ..Default::default() 
     };
 
     init(config).unwrap();
-    timeit_multithreaded(5, 10000);
+    
+    for _ in 0..10000 {
+        error!("TESTING!");
+    }
 }
 
 mod helpers {
@@ -24,6 +30,7 @@ mod helpers {
         for _ in 0..num_of_iters {
             error!("TESTING!");
         }
+
         println!("Time elapsed: {:?}", start_time.elapsed());
     }
 
