@@ -42,11 +42,12 @@ pub enum OutputDirName {
     /// The log file is written to the current directory.
     CurrentDir,
     /// The log file is written to a directory specified by the user.
-    CustomDir(&'static str),
+    Custom(&'static str),
 }
 
 /// The time zone used for the log entries.
-/// Defaults to `Local`
+/// Make sure to use `UTC` for async programs.
+/// Defaults to `UTC`
 pub enum TimeZone {
     /// Local system time.
     Local,
@@ -110,7 +111,7 @@ impl Default for Config {
             out_file_name: OutputFileName::AutoGenerate,
             out_dir_name: OutputDirName::CurrentDir,
             min_log_level: LevelFilter::Info,
-            timezone: TimeZone::Local,
+            timezone: TimeZone::UTC,
             logging_mode: LoggingMode::Console,
             console_mode: ConsoleMode::Stdout,
             datetime_format: DateTimeFormat::ISO8601,

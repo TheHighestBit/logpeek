@@ -210,7 +210,7 @@ impl Logger {
     fn get_log_pathbuf(config: &Config) -> PathBuf {
         let mut out_path = match &config.out_dir_name {
             OutputDirName::CurrentDir => PathBuf::from("."),
-            OutputDirName::CustomDir(custom_dir) => PathBuf::from(custom_dir),
+            OutputDirName::Custom(custom_dir) => PathBuf::from(custom_dir),
         };
 
         out_path.push(match &config.out_file_name {
