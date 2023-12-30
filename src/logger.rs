@@ -175,8 +175,6 @@ impl Logger {
     }
 
     fn split_output_file(&self) {
-        Logger::log_critical("Maximum log file size reached, creating a new log file...");
-        
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
             Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
             err.into_inner()
