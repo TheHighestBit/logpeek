@@ -46,7 +46,8 @@ pub enum OutputDirName {
 }
 
 /// The time zone used for the log entries.
-/// Defaults to `Local`
+/// Make sure to use `UTC` for async programs.
+/// Defaults to `UTC`
 pub enum TimeZone {
     /// Local system time.
     Local,
@@ -60,7 +61,7 @@ pub enum DateTimeFormat {
     RFC3339,
     RFC2822,
     /// Refer to `<https://time-rs.github.io/book/api/format-description.html#components>` (ver 1) for a list of valid format components.
-    Custom(String),
+    Custom(&'static str),
 }
 
 /// Whether to use ANSI escape codes to color the log entries in the terminal.
@@ -80,6 +81,15 @@ pub enum LoggingStrategy {
     Asynchronous
 }
 
+/// Whether to split the log files by size or not.
+/// If `True`, the log files will be split when they reach the specified size (in bytes).
+/// Defaults to `False`
+#[derive(PartialEq)]
+pub enum SplitLogFiles {
+    True(u64),
+    False
+}
+
 /// 'Config' struct that contains the configuration options for the logger.
 /// Use `Default::default()` for the default settings.
 pub struct Config {
@@ -92,6 +102,7 @@ pub struct Config {
     pub datetime_format: DateTimeFormat,
     pub use_term_color: UseTermColor,
     pub logging_strategy: LoggingStrategy,
+    pub split_log_files: SplitLogFiles,
 }
 
 impl Default for Config {
@@ -100,12 +111,13 @@ impl Default for Config {
             out_file_name: OutputFileName::AutoGenerate,
             out_dir_name: OutputDirName::CurrentDir,
             min_log_level: LevelFilter::Info,
-            timezone: TimeZone::Local,
+            timezone: TimeZone::UTC,
             logging_mode: LoggingMode::Console,
             console_mode: ConsoleMode::Stdout,
             datetime_format: DateTimeFormat::ISO8601,
             use_term_color: UseTermColor::True,
             logging_strategy: LoggingStrategy::Synchronous,
+            split_log_files: SplitLogFiles::False
         }
     }
 }
