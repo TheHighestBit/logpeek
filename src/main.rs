@@ -5,10 +5,9 @@ use crate::helpers::timeit_multithreaded;
 
 fn main() {
     let config = Config {
-        out_dir_name: OutputDirName::CustomDir("logs"),
+        out_dir_name: OutputDirName::CustomDir("logs".to_string()),
         console_mode: ConsoleMode::Mixed,
         logging_mode: LoggingMode::File,
-        datetime_format: DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]"),
         ..Default::default() 
     };
 
@@ -22,7 +21,7 @@ mod helpers {
         let start_time = std::time::Instant::now();
 
         for _ in 0..num_of_iters {
-            error!("TESTING!");
+            error!("TESTING");
         }
         println!("Time elapsed: {:?}", start_time.elapsed());
     }
@@ -35,7 +34,7 @@ mod helpers {
         for i in 0..num_of_threads {
             threads.push(std::thread::spawn(move || {
                 for _ in 0..num_of_iters {
-                    error!("TESTING from thread {}!", i);
+                    error!("TESTING from thread {}", i);
                 }
             }));
         }

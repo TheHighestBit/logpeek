@@ -155,7 +155,7 @@ impl Logger {
             config::TimeZone::UTC => OffsetDateTime::now_utc(),
         };
 
-        let format_result = match self.config.datetime_format {
+        let format_result = match &self.config.datetime_format {
             config::DateTimeFormat::ISO8601 => dt.format(&Iso8601::DEFAULT),
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822),
@@ -242,12 +242,12 @@ mod tests {
 
     // Cleans up the log file after the test is done.
     struct FileCleaner {
-        file_name: &'static str,
+        file_name: String,
     }
 
     impl Drop for FileCleaner {
         fn drop(&mut self) {
-            fs::remove_file(self.file_name).unwrap();
+            fs::remove_file(self.file_name.clone()).unwrap();
         }
     }
 
@@ -258,12 +258,12 @@ mod tests {
     // Logs all log levels into a file and verifies that they were written correctly.
     #[test]
     fn test_all_levels() {
-        let log_file_name = "test_all_levels.log";
-        let _file_cleaner = FileCleaner { file_name: log_file_name };
+        let log_file_name = String::from("test_all_levels.log");
+        let _file_cleaner = FileCleaner { file_name: log_file_name.clone() };
 
         let logger = setup(Config {
             min_log_level: LevelFilter::Trace,
-            out_file_name: OutputFileName::Custom(log_file_name),
+            out_file_name: OutputFileName::Custom(log_file_name.clone()),
             logging_mode: LoggingMode::File,
             ..Default::default()
         });
@@ -291,12 +291,12 @@ mod tests {
     // Logs all log levels into a file via the macros from the `log` crate and verifies that they were written correctly.
     #[test]
     fn test_all_macros() {
-        let log_file_name = "test_all_macros.log";
-        let _file_cleaner = FileCleaner { file_name: log_file_name };
+        let log_file_name = String::from("test_all_macros.log");
+        let _file_cleaner = FileCleaner { file_name: log_file_name.clone() };
 
         init(Config {
             min_log_level: LevelFilter::Trace,
-            out_file_name: OutputFileName::Custom(log_file_name),
+            out_file_name: OutputFileName::Custom(log_file_name.clone()),
             logging_mode: LoggingMode::File,
             ..Default::default()
         }).unwrap();
@@ -324,12 +324,12 @@ mod tests {
     // Tests logging from multiple threads simultaneously into a single file.
     #[test]
     fn test_logging_multithreaded() {
-        let log_file_name = "test_multithreaded.log";
-        let _file_cleaner = FileCleaner { file_name: log_file_name };
+        let log_file_name = String::from("test_multithreaded.log");
+        let _file_cleaner = FileCleaner { file_name: log_file_name.clone() };
 
         let logger = Arc::new(setup(Config {
             min_log_level: LevelFilter::Trace,
-            out_file_name: OutputFileName::Custom(log_file_name),
+            out_file_name: OutputFileName::Custom(log_file_name.clone()),
             logging_mode: LoggingMode::File,
             ..Default::default()
         }));
@@ -364,12 +364,12 @@ mod tests {
     // Verifies that the logging operation is atomic and entries are written even in case of a panic.
     #[test]
     fn test_panic_logging() {
-        let log_file_name = "test_panic.log";
-        let _file_cleaner = FileCleaner { file_name: log_file_name };
+        let log_file_name = String::from("test_panic.log");
+        let _file_cleaner = FileCleaner { file_name: log_file_name.clone() };
 
         let logger = Arc::new(setup(Config {
             min_log_level: LevelFilter::Trace,
-            out_file_name: OutputFileName::Custom(log_file_name),
+            out_file_name: OutputFileName::Custom(log_file_name.clone()),
             logging_mode: LoggingMode::File,
             ..Default::default()
         }));

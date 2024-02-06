@@ -33,7 +33,7 @@ pub enum OutputFileName {
     /// The log file name is automatically generated based on the current date and time (UTC).
     AutoGenerate,
     /// The log file name is specified by the user.
-    Custom(&'static str),
+    Custom(String),
 }
 
 /// The name of the directory where the log file is written to. Only applies if `LoggingMode` is `File` or `FileAndConsole`.
@@ -42,7 +42,7 @@ pub enum OutputDirName {
     /// The log file is written to the current directory.
     CurrentDir,
     /// The log file is written to a directory specified by the user.
-    CustomDir(&'static str),
+    CustomDir(String),
 }
 
 /// The time zone used for the log entries.
@@ -60,7 +60,7 @@ pub enum DateTimeFormat {
     RFC3339,
     RFC2822,
     /// Refer to `<https://time-rs.github.io/book/api/format-description.html#components>` (ver 1) for a list of valid format components.
-    Custom(&'static str),
+    Custom(String),
 }
 
 /// Whether to use ANSI escape codes to color the log entries in the terminal.
