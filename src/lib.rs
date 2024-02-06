@@ -11,7 +11,7 @@
 //!
 //! // See the documentation for the config module for more options
 //! let config = logpeek::config::Config {
-//!     out_dir_name: logpeek::config::OutputDirName::CustomDir("logs".to_string()),
+//!     out_dir_name: logpeek::config::OutputDirName::Custom("logs".to_string()),
 //!     logging_mode: logpeek::config::LoggingMode::FileAndConsole,
 //!     datetime_format: logpeek::config::DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]".to_string()),
 //!    ..Default::default()

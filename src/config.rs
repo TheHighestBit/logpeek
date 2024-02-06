@@ -42,7 +42,7 @@ pub enum OutputDirName {
     /// The log file is written to the current directory.
     CurrentDir,
     /// The log file is written to a directory specified by the user.
-    CustomDir(String),
+    Custom(String),
 }
 
 /// The time zone used for the log entries.

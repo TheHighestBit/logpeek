@@ -8,7 +8,7 @@ use crate::helpers::timeit_multithreaded;
 
 fn main() {
     let config = Config {
-        out_dir_name: OutputDirName::CustomDir("logs".to_string()),
+        out_dir_name: OutputDirName::Custom("logs".to_string()),
         console_mode: ConsoleMode::Mixed,
         logging_mode: LoggingMode::File,
         split_log_files: SplitLogFiles::True(5_000_0),
