@@ -1,5 +1,5 @@
 //! `logpeek` is a logger implementation for the `log` crate, which focuses on reliability and simplicity.
-//! It is meant to integrate seamlessly with logpeek-server (coming soon).
+//! It is meant to integrate seamlessly with logpeek-server.
 //!
 //! It provides a `Config` struct for configuring the logger.
 //! The logger can be initialized with the `init` function.
@@ -13,7 +13,7 @@
 //! let config = logpeek::config::Config {
 //!     out_dir_name: logpeek::config::OutputDirName::Custom("logs".to_string()),
 //!     logging_mode: logpeek::config::LoggingMode::FileAndConsole,
-//!     datetime_format: logpeek::config::DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]".to_string()),
+//!     datetime_format: logpeek::config::DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond]"),
 //!    ..Default::default()
 //! };
 //!

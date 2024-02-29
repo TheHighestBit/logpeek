@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use colored::Colorize;
-use log::{Log, Metadata, Record};
+use log::{error, Log, Metadata, Record};
 use time::{format_description, OffsetDateTime};
 use time::format_description::well_known::{Iso8601, Rfc2822, Rfc3339};
 
@@ -114,28 +114,26 @@ impl Logger {
 
             match self.config.console_mode {
                 config::ConsoleMode::Stdout => write!(stdout(), "{}", colored_message).unwrap_or_else(|err| {
-                    Logger::log_critical(format!("Failed to write to stdout {:?}", err));
+                    error!("Failed to write to stdout {:?}", err);
                 }),
                 config::ConsoleMode::Stderr => write!(stderr(), "{}", colored_message).unwrap_or_else(|_| ()),
                 config::ConsoleMode::Mixed => {
                     match log_level {
-                        log::Level::Error => write!(stdout(), "{}", colored_message).unwrap_or_else(|err| {
-                            Logger::log_critical(format!("Failed to write to stdout {:?}", err));
+                        log::Level::Error => write!(stderr(), "{}", colored_message).unwrap_or_else(|err| {
+                            error!("Failed to write to stdout {:?}", err);
                         }),
-                        _ => write!(stderr(), "{}", colored_message).unwrap_or_else(|_| ()),
+                        _ => write!(stdout(), "{}", colored_message).unwrap_or_else(|_| ()),
                     }
                 }
             }
         }
 
-        let mut is_split = false;
-
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
-            Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
+            error!("A thread panicked while holding the log file lock, using into_inner {:?}", err);
             err.into_inner()
         }).as_mut() {
             if let Err(e) = output_handle.container.write(message.as_bytes()) {
-                Logger::log_critical(format!("Failed to write to log file {:?}", e));
+                error!("Failed to write to log file {:?}", e);
             }
 
             if self.config.split_log_files != config::SplitLogFiles::False {
@@ -143,24 +141,20 @@ impl Logger {
 
                 if let config::SplitLogFiles::True(max_size) = self.config.split_log_files {
                     if output_handle.file_size >= max_size {
-                        is_split = true;
+                        self.split_output_file();
                     }
                 }
             }
-        }
-
-        if is_split {
-            self.split_output_file();
         }
     }
 
     pub fn flush(&self) {
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
-            Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
+            error!("A thread panicked while holding the log file lock, using into_inner {:?}", err);
             err.into_inner()
         }).as_mut() {
             if let Err(e) = output_handle.container.flush() {
-                Logger::log_critical(format!("Failed to flush log file {:?}", e));
+                error!("Failed to flush log file {:?}", e);
             }
         };
 
@@ -176,7 +170,7 @@ impl Logger {
 
     fn split_output_file(&self) {
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
-            Logger::log_critical(format!("A thread panicked while holding the log file lock, using into_inner {:?}", err));
+            error!("A thread panicked while holding the log file lock, using into_inner {:?}", err);
             err.into_inner()
         }).as_mut() {
             *output_handle = Logger::output_file_setup(&self.config);
@@ -187,7 +181,7 @@ impl Logger {
     pub fn get_current_time(&self) -> Result<String, ()> {
         let dt: OffsetDateTime = match self.config.timezone {
             config::TimeZone::Local => OffsetDateTime::now_local().map_err(|_| {
-                Logger::log_critical("Failed to get local time");
+                error!("Failed to get local time");
             })?,
             config::TimeZone::UTC => OffsetDateTime::now_utc(),
         };
@@ -197,12 +191,12 @@ impl Logger {
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822),
             config::DateTimeFormat::Custom(format_str) => dt.format(&format_description::parse_borrowed::<1>(format_str).map_err(|_| {
-                Logger::log_critical("Invalid custom time format description");
+                error!("Invalid custom time format description");
             })?),
         };
 
         format_result.map_err(|_| {
-            Logger::log_critical("Failed to format date");
+            error!("Failed to format date");
         })
     }
 
@@ -226,20 +220,12 @@ impl Logger {
         let format = format_description::parse(
             "[year]_[month]_[day]_[hour]_[minute]_[second].log",
         ).map_err(|err| {
-            Logger::log_critical(format!("This shouldn't happen! Failed to parse date format: {:?}", err));
+            error!("This shouldn't happen! Failed to parse date format: {:?}", err);
         })?;
 
         OffsetDateTime::now_utc().format(&format).map_err(|err| {
-            Logger::log_critical(format!("This shouldn't happen! Failed to format date: {:?}", err));
+            error!("This shouldn't happen! Failed to format date: {:?}", err);
         })
-    }
-
-    /// Logs a custom 'CRITICAL' message to stderr. Used for internal errors that are recoverable but should still be dealt with.
-    fn log_critical<T>(message: T)
-    where T: Display {
-        let message = format!("{} {} - {}\n", "CRITICAL", "logpeek", message).bright_red().bold();
-
-        let _ = write!(stderr(), "{}", message);
     }
 }
 

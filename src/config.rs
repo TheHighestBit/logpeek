@@ -23,7 +23,7 @@ pub enum ConsoleMode {
     Stdout,
     /// Logs are written to stderr
     Stderr,
-    /// Only log entries with a level of `Error` or higher are written to stderr. All other log entries are written to stdout.
+    /// Only log entries with a level of `Error` are written to stderr. All other log entries are written to stdout.
     Mixed,
 }
 
