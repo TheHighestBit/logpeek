@@ -2,6 +2,13 @@
 name = "logpeek"
 version = "0.1.0"
 edition = "2021"
+authors = ["Joosep Orasmäe <jooseporasmae@outlook.com>"]
+description = "A logger implementation for the log crate. Meant to integrate with logpeek-server."
+readme = "README.md"
+repository = "https://github.com/TheHighestBit/logpeek"
+license = "MIT OR Apache-2.0"
+keywords = ["log", "logpeek", "logpeek-server", "logger", "logging"]
+categories = ["development-tools::debugging"]
 
 [dependencies]
 time = { version = "0.3.30", features = ["formatting", "local-offset"] }

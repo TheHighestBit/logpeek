@@ -1,5 +1,4 @@
 //! Logger implementation
-use std::fmt::Display;
 use std::{fs, io};
 use std::fs::File;
 use std::io::{BufWriter, stderr, stdout, Write};
@@ -9,6 +8,7 @@ use std::sync::Mutex;
 use colored::Colorize;
 use log::{error, Log, Metadata, Record};
 use time::{format_description, OffsetDateTime};
+use time::format_description::FormatItem;
 use time::format_description::well_known::{Iso8601, Rfc2822, Rfc3339};
 
 use crate::{Config, config};
@@ -17,6 +17,7 @@ use crate::config::OutputDirName;
 pub struct Logger {
     output_lock: Mutex<Option<Output>>,
     config: Config,
+    custom_time_format: Option<Vec<FormatItem<'static>>>,
 }
 
 enum OutputContainer {
@@ -61,10 +62,20 @@ impl Logger {
             },
             _ => None,
         };
+        
+        let custom_time_format = match &config.datetime_format {
+            config::DateTimeFormat::Custom(format_str) => {
+                Some(format_description::parse_borrowed::<1>(format_str).unwrap_or_else(|err| {
+                    panic!("Invalid custom time format description: {:?}", err);
+                }))
+            },
+            _ => None,
+        };
 
         Logger {
             output_lock: Mutex::new(output_handle),
-            config
+            config,
+            custom_time_format
         }
     }
 
@@ -186,16 +197,12 @@ impl Logger {
             config::TimeZone::UTC => OffsetDateTime::now_utc(),
         };
 
-        let format_result = match &self.config.datetime_format {
+        match &self.config.datetime_format {
             config::DateTimeFormat::ISO8601 => dt.format(&Iso8601::DEFAULT),
             config::DateTimeFormat::RFC3339 => dt.format(&Rfc3339),
             config::DateTimeFormat::RFC2822 => dt.format(&Rfc2822),
-            config::DateTimeFormat::Custom(format_str) => dt.format(&format_description::parse_borrowed::<1>(format_str).map_err(|_| {
-                error!("Invalid custom time format description");
-            })?),
-        };
-
-        format_result.map_err(|_| {
+            config::DateTimeFormat::Custom(_) => dt.format(self.custom_time_format.as_ref().expect("This shouldn't happen! Custom time format not parsed!")),
+        }.map_err(|_| {
             error!("Failed to format date");
         })
     }
@@ -298,7 +305,7 @@ mod tests {
         logger.write("ERROR test\n", &Level::Error);
 
         let file_handle = File::open(log_file_name).unwrap();
-        let reader = std::io::BufReader::new(file_handle);
+        let reader = io::BufReader::new(file_handle);
 
         let lines= reader.lines()
             .map(|line| line.unwrap())
@@ -331,7 +338,7 @@ mod tests {
         error!("error test");
 
         let file_handle = File::open(log_file_name).unwrap();
-        let reader = std::io::BufReader::new(file_handle);
+        let reader = io::BufReader::new(file_handle);
 
         let lines= reader.lines()
             .map(|line| line.unwrap())
@@ -360,7 +367,7 @@ mod tests {
 
         for i in 0..5 {
             let logger = Arc::clone(&logger);
-            threads.push(std::thread::spawn(move || {
+            threads.push(thread::spawn(move || {
                 for _ in 0..100 {
                     let message = format!("TESTING from thread {}!\n", i);
                     logger.write(&message, &Level::Error)
@@ -375,7 +382,7 @@ mod tests {
         }
 
         let file_handle = File::open(log_file_name).unwrap();
-        let reader = std::io::BufReader::new(file_handle);
+        let reader = io::BufReader::new(file_handle);
 
         let lines= reader.lines()
             .map(|line| line.unwrap())
