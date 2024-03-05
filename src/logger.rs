@@ -138,7 +138,8 @@ impl Logger {
                 }
             }
         }
-
+        
+        let mut is_split = false;
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
             error!("A thread panicked while holding the log file lock, using into_inner {:?}", err);
             err.into_inner()
@@ -152,10 +153,15 @@ impl Logger {
 
                 if let config::SplitLogFiles::True(max_size) = self.config.split_log_files {
                     if output_handle.file_size >= max_size {
-                        self.split_output_file();
+                        is_split = true;
                     }
                 }
             }
+        }
+
+        // This needs to happen after the lock has been dropped, or we get into a deadlock
+        if is_split {
+            self.split_output_file();
         }
     }
 
@@ -180,6 +186,7 @@ impl Logger {
     }
 
     fn split_output_file(&self) {
+        // If two files are created within a second of each other, they will have the same name and logs will be appended to the first.
         if let Some(output_handle) = self.output_lock.lock().unwrap_or_else(|err| {
             error!("A thread panicked while holding the log file lock, using into_inner {:?}", err);
             err.into_inner()

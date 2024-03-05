@@ -2,33 +2,33 @@
 use log::LevelFilter;
 
 
-/// Where the logs are written to
+/// Where the logs are written to.
 /// Defaults to `Console`
 #[derive(PartialEq)]
 pub enum LoggingMode {
-    /// Logs are written to a file
+    /// Logs are written to a file.
     File,
-    /// Logs are written to the console (stdout or stderr)
+    /// Logs are written to the console (stdout or stderr).
     Console,
-    /// Logs are written to both a file and the console (stdout or stderr)
+    /// Logs are written to both a file and the console (stdout or stderr).
     FileAndConsole,
 }
 
 
 /// The output stream for the console. Only applies if `LoggingMode` is `Console` or `FileAndConsole`.
-/// Defaults to `Stdout`
+/// Defaults to `Stdout`.
 #[derive(PartialEq)]
 pub enum ConsoleMode {
-    /// Logs are written to stdout
+    /// Logs are written to stdout.
     Stdout,
-    /// Logs are written to stderr
+    /// Logs are written to stderr.
     Stderr,
     /// Only log entries with a level of `Error` are written to stderr. All other log entries are written to stdout.
     Mixed,
 }
 
 /// The name of the log file. Only applies if `LoggingMode` is `File` or `FileAndConsole`.
-/// Defaults to `AutoGenerate`
+/// Defaults to `AutoGenerate`.
 pub enum OutputFileName {
     /// The log file name is automatically generated based on the current date and time (UTC).
     AutoGenerate,
@@ -37,7 +37,7 @@ pub enum OutputFileName {
 }
 
 /// The name of the directory where the log file is written to. Only applies if `LoggingMode` is `File` or `FileAndConsole`.
-/// Defaults to `CurrentDir`
+/// Defaults to `Custom` with the output directory being logs.
 pub enum OutputDirName {
     /// The log file is written to the current directory.
     CurrentDir,
@@ -47,7 +47,7 @@ pub enum OutputDirName {
 
 /// The time zone used for the log entries.
 /// Make sure to use `UTC` for async programs.
-/// Defaults to `UTC`
+/// Defaults to `UTC`.
 pub enum TimeZone {
     /// Local system time.
     Local,
@@ -55,7 +55,7 @@ pub enum TimeZone {
 }
 
 /// The format of the date and time in the log entries.
-/// Defaults to `ISO8601`
+/// Defaults to `ISO8601`.
 pub enum DateTimeFormat {
     ISO8601,
     RFC3339,
@@ -65,7 +65,7 @@ pub enum DateTimeFormat {
 }
 
 /// Whether to use ANSI escape codes to color the log entries in the terminal.
-/// Defaults to `True`
+/// Defaults to `True`.
 #[derive(PartialEq)]
 pub enum UseTermColor {
     True,
@@ -74,16 +74,17 @@ pub enum UseTermColor {
 
 /// Whether to write log entries synchronously (io-blocking) or asynchronously.
 /// When using asynchronous logging, make sure to call log::logger().flush() before exiting the program.
-/// Defaults to `Synchronous`
+/// Defaults to `Synchronous`.
 #[derive(PartialEq)]
 pub enum LoggingStrategy {
     Synchronous,
     Asynchronous
 }
 
-/// Whether to split the log files by size or not.
+/// Whether to split the log files by size or not. 
+/// This has no effect if `OutputFileName` is `Custom`, since the new file will have the same name as the old one.
 /// If `True`, the log files will be split when they reach the specified size (in bytes).
-/// Defaults to `False`
+/// Defaults to `False`.
 #[derive(PartialEq)]
 pub enum SplitLogFiles {
     True(u64),
@@ -109,7 +110,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             out_file_name: OutputFileName::AutoGenerate,
-            out_dir_name: OutputDirName::CurrentDir,
+            out_dir_name: OutputDirName::Custom("logs".to_string()),
             min_log_level: LevelFilter::Info,
             timezone: TimeZone::UTC,
             logging_mode: LoggingMode::Console,

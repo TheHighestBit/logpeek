@@ -11,7 +11,6 @@
 //!
 //! // See the documentation for the config module for more options
 //! let config = logpeek::config::Config {
-//!     out_dir_name: logpeek::config::OutputDirName::Custom("logs".to_string()),
 //!     logging_mode: logpeek::config::LoggingMode::FileAndConsole,
 //!     datetime_format: logpeek::config::DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond][offset_hour sign:mandatory]"), // Logpeek-server requires the UTC offset to be present. 
 //!    ..Default::default()
