@@ -301,6 +301,7 @@ mod tests {
         let logger = setup(Config {
             min_log_level: LevelFilter::Trace,
             out_file_name: OutputFileName::Custom(log_file_name.clone()),
+            out_dir_name: OutputDirName::CurrentDir,
             logging_mode: LoggingMode::File,
             ..Default::default()
         });
@@ -334,6 +335,7 @@ mod tests {
         init(Config {
             min_log_level: LevelFilter::Trace,
             out_file_name: OutputFileName::Custom(log_file_name.clone()),
+            out_dir_name: OutputDirName::CurrentDir,
             logging_mode: LoggingMode::File,
             ..Default::default()
         }).unwrap();
@@ -367,6 +369,7 @@ mod tests {
         let logger = Arc::new(setup(Config {
             min_log_level: LevelFilter::Trace,
             out_file_name: OutputFileName::Custom(log_file_name.clone()),
+            out_dir_name: OutputDirName::CurrentDir,
             logging_mode: LoggingMode::File,
             ..Default::default()
         }));
@@ -407,6 +410,7 @@ mod tests {
         let logger = Arc::new(setup(Config {
             min_log_level: LevelFilter::Trace,
             out_file_name: OutputFileName::Custom(log_file_name.clone()),
+            out_dir_name: OutputDirName::CurrentDir,
             logging_mode: LoggingMode::File,
             ..Default::default()
         }));
