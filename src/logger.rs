@@ -245,7 +245,7 @@ impl Logger {
 
 impl Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= self.config.min_log_level
+        metadata.level() <= self.config.min_log_level && (self.config.target_filter.is_none() || !self.config.target_filter.as_ref().unwrap().contains(&metadata.target()))
     }
 
     fn log(&self, record: &Record) {

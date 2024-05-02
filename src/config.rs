@@ -104,6 +104,7 @@ pub struct Config {
     pub use_term_color: UseTermColor,
     pub logging_strategy: LoggingStrategy,
     pub split_log_files: SplitLogFiles,
+    pub target_filter: Option<Vec<&'static str>>,
 }
 
 impl Default for Config {
@@ -118,7 +119,8 @@ impl Default for Config {
             datetime_format: DateTimeFormat::ISO8601,
             use_term_color: UseTermColor::True,
             logging_strategy: LoggingStrategy::Synchronous,
-            split_log_files: SplitLogFiles::False
+            split_log_files: SplitLogFiles::False,
+            target_filter: None,
         }
     }
 }

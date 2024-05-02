@@ -1,6 +1,6 @@
 [package]
 name = "logpeek"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Joosep Orasmäe <jooseporasmae@outlook.com>"]
 description = "A logger implementation for the log crate. Meant to integrate with logpeek-server."

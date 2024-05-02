@@ -13,7 +13,8 @@
 //! let config = logpeek::config::Config {
 //!     logging_mode: logpeek::config::LoggingMode::FileAndConsole,
 //!     datetime_format: logpeek::config::DateTimeFormat::Custom("[hour]:[minute]:[second]:[subsecond][offset_hour sign:mandatory]"), // Logpeek-server requires the UTC offset to be present. 
-//!    ..Default::default()
+//!     target_filter: Some(vec!["logpeek::example_module"]), // No messages orginating from logpeek::example_module will be logged
+//!     ..Default::default()
 //! };
 //!
 //! logpeek::init(config).unwrap(); // For the default config use logpeek::init(Default::default()).unwrap();
