@@ -17,7 +17,7 @@ for most use cases, the default configuration will suffice.
 Either use `cargo add logpeek log` or include them in your `Cargo.toml`.
 ```toml
 [dependencies]
-logpeek = "0.1.0"
+logpeek = "0.2.0"
 log = "0.4.20"
 ```
 
